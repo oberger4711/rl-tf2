@@ -10,7 +10,7 @@ class CartPoleConfig(BaseConfig):
     BaseConfig.__init__(self, CartPoleConfig.ENV_NAME)
     self.LEARNING_RATE = 5e-4
     self.BATCH_SIZE = 32
-    self.NUM_ITERATIONS_TRAINING = 10000
+    self.NUM_ITERATIONS_TRAINING = 40000
     self.NUM_ITERATIONS_BETWEEN_TARGET_UPDATES = 500
     self.REPLAY_MEMORY_CAPACITY = 50000
     self.EXPL_EPSILON_START = 1.0

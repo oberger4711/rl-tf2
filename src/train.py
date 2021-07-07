@@ -18,7 +18,7 @@ if DEBUG:
 FLOAT_EPSILON = np.finfo(np.float32).eps.item()
 
 # Instantiate config defining gym environment, model and hyperparameters
-ConfigClass = config.CONFIGS["Acrobot-v1"]
+ConfigClass = config.CONFIGS["CartPole-v1"]
 cfg = ConfigClass()
 
 envs = [gym.make(cfg.ENV_NAME) for _ in range(cfg.BATCH_SIZE)]
