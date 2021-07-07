@@ -10,7 +10,7 @@ class AcrobotConfig(BaseConfig):
     BaseConfig.__init__(self, AcrobotConfig.ENV_NAME)
     self.LEARNING_RATE = 5e-4
     self.BATCH_SIZE = 32
-    self.NUM_ITERATIONS_TRAINING = 100000
+    self.NUM_ITERATIONS_TRAINING = 150000
     self.NUM_ITERATIONS_BETWEEN_TARGET_UPDATES = 500
     self.REPLAY_MEMORY_CAPACITY = 50000
     self.EXPL_EPSILON_START = 1.0
@@ -24,13 +24,15 @@ class AcrobotConfig(BaseConfig):
     def __init__(self, env):
       super().__init__()
       num_actions = env.action_space.n
-      self.fc1 = keras.layers.Dense(32, activation='tanh')
-      self.fc2 = keras.layers.Dense(32, activation='relu')
+      self.fc1 = keras.layers.Dense(64, activation='tanh')
+      self.fc2 = keras.layers.Dense(64, activation='tanh')
+      self.fc3 = keras.layers.Dense(256, activation='relu')
       self.output_layer = keras.layers.Dense(num_actions)
     
     def call(self, inputs: tf.Tensor):
       x = self.fc1(inputs)
       x = self.fc2(x)
+      x = self.fc3(x)
       q_values = self.output_layer(x)
       return q_values
 
