@@ -13,6 +13,7 @@ class BaseConfig:
     self.REPLAY_MEMORY_CAPACITY = 50000
     self.EXPL_EPSILON_START = 1.0
     self.EXPL_EPSILON_END = 0.10
+    self.EXPL_EPSILON_PERCENTAGE_RAMP = 0.1
     self.DISCOUNT_FACTOR = 0.95 # Gamma
     self.DOUBLE_DQN = True
     self.MONITORING_SLIDING_WINDOW_LEN = 200

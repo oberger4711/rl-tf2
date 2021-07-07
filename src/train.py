@@ -18,14 +18,14 @@ if DEBUG:
 FLOAT_EPSILON = np.finfo(np.float32).eps.item()
 
 # Instantiate config defining gym environment, model and hyperparameters
-ConfigClass = config.CONFIGS["CartPole-v1"]
+ConfigClass = config.CONFIGS["Acrobot-v1"]
 cfg = ConfigClass()
 
 envs = [gym.make(cfg.ENV_NAME) for _ in range(cfg.BATCH_SIZE)]
 env_0 = envs[0]
 envs_states = [e.reset().astype(np.float32) for e in envs]
 envs_episode_lens = [0] * cfg.BATCH_SIZE
-print(f'Environment {cfg.ENV_NAME}')
+print(f'Environment {cfg.ENV_NAME}:')
 print(f'  State / observation space:  {env_0.observation_space}')
 print(f'  Action space:               {env_0.action_space}')
 
@@ -156,7 +156,7 @@ def train_step(mb_transitions, q_model, target_model, optimizer):
   return loss
 
 # TRAINING
-expl_epsilon = utilities.make_epsilon_func_ramped(cfg.EXPL_EPSILON_START, cfg.EXPL_EPSILON_END, cfg.NUM_ITERATIONS_TRAINING, 0.1)
+expl_epsilon = utilities.make_epsilon_func_ramped(cfg.EXPL_EPSILON_START, cfg.EXPL_EPSILON_END, cfg.NUM_ITERATIONS_TRAINING, cfg.EXPL_EPSILON_PERCENTAGE_RAMP)
 rb_episodes_lens = utilities.RingBuffer(cfg.MONITORING_SLIDING_WINDOW_LEN)
 with tqdm.trange(cfg.NUM_ITERATIONS_TRAINING, desc='Training') as t:
   for iteration in t:
