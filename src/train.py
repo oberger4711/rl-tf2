@@ -10,6 +10,7 @@ import tqdm
 
 import config
 import utilities
+import env.tetris
 
 # DEBUGGING
 DEBUG = False # NOTE: True is significantly faster than False
@@ -18,13 +19,14 @@ if DEBUG:
 FLOAT_EPSILON = np.finfo(np.float32).eps.item()
 
 # Instantiate config defining gym environment, model and hyperparameters
-ConfigClass = config.CONFIGS["CartPole-v1"]
+ConfigClass = config.CONFIGS["TetrisFrames10x20-v0"]
 cfg = ConfigClass()
 
 envs = [gym.make(cfg.ENV_NAME) for _ in range(cfg.BATCH_SIZE)]
 env_0 = envs[0]
 envs_states = [e.reset().astype(np.float32) for e in envs]
 envs_episode_lens = [0] * cfg.BATCH_SIZE
+envs_episode_total_rewards = [0] * cfg.BATCH_SIZE
 print(f'Environment {cfg.ENV_NAME}:')
 print(f'  State / observation space:  {env_0.observation_space}')
 print(f'  Action space:               {env_0.action_space}')
@@ -57,7 +59,7 @@ update_target_model(q_model, target_model)
 
 def envs_step(actions: np.ndarray):
   transitions = [None] * cfg.BATCH_SIZE
-  done_episodes_lens = []
+  done_episodes_lens, done_episodes_total_rewards = [], []
   for i, env in enumerate(envs):
     action = actions[i]
     state_t = envs_states[i]
@@ -68,15 +70,18 @@ def envs_step(actions: np.ndarray):
     transitions[i] = (state_t, actions[i], state_t1, reward, done)
     # Update tracked env states for next step
     envs_episode_lens[i] += 1
+    envs_episode_total_rewards[i] += reward
     if not raw_done:
       envs_states[i] = state_t1
     else:
       # New episode
       envs_states[i] = env.reset().astype(np.float32)
       done_episodes_lens.append(envs_episode_lens[i])
+      done_episodes_total_rewards.append(envs_episode_total_rewards[i])
       envs_episode_lens[i] = 0
-  #envs[0].render()
-  return transitions, done_episodes_lens
+      envs_episode_total_rewards[i] = 0
+  envs[0].render()
+  return transitions, done_episodes_lens, done_episodes_total_rewards
 
 def decide_action_epsilon_greedy(q_values: tf.Tensor, expl_epsilon: float):
   best_q_actions = tf.argmax(q_values, axis=1, output_type=tf.int32)
@@ -89,15 +94,15 @@ def run_steps(q_model: tf.keras.Model, expl_epsilon: float=0):
   states_t = np.stack(envs_states)
   q_values = q_model(states_t)
   actions = decide_action_epsilon_greedy(q_values, expl_epsilon)
-  transitions, done_episodes_lens = envs_step(actions.numpy())
-  return transitions, q_values.numpy(), np.array(done_episodes_lens, dtype=np.int32)
+  transitions, done_episodes_lens, done_episodes_total_rewards = envs_step(actions.numpy())
+  return transitions, q_values.numpy(), np.array(done_episodes_lens, dtype=np.int32), np.array(done_episodes_total_rewards, dtype=np.int32)
 
 def init_replay_memory(q_model):
   """Initializes replay memory with data."""
   replay_memory = utilities.RingBuffer(cfg.REPLAY_MEMORY_CAPACITY)
   with tqdm.tqdm(total=cfg.REPLAY_MEMORY_CAPACITY, unit=" transitions", desc="Initialize replay memory with transitions") as t:
     while not replay_memory.full:
-      transitions, _, _ = run_steps(q_model, cfg.EXPL_EPSILON_START)
+      transitions, _, _, _ = run_steps(q_model, cfg.EXPL_EPSILON_START)
       replay_memory.put_all(transitions)
       t.update(len(transitions))
   return replay_memory
@@ -158,6 +163,7 @@ def train_step(mb_transitions, q_model, target_model, optimizer):
 # TRAINING
 expl_epsilon = utilities.make_epsilon_func_ramped(cfg.EXPL_EPSILON_START, cfg.EXPL_EPSILON_END, cfg.NUM_ITERATIONS_TRAINING, cfg.EXPL_EPSILON_PERCENTAGE_RAMP)
 rb_episodes_lens = utilities.RingBuffer(cfg.MONITORING_SLIDING_WINDOW_LEN)
+rb_episodes_total_rewards = utilities.RingBuffer(cfg.MONITORING_SLIDING_WINDOW_LEN)
 with tqdm.trange(cfg.NUM_ITERATIONS_TRAINING, desc='Training') as t:
   for iteration in t:
     # DQN algorithm:
@@ -167,10 +173,11 @@ with tqdm.trange(cfg.NUM_ITERATIONS_TRAINING, desc='Training') as t:
 
     # Generate new transitions with current model for replay memory
     epsilon = expl_epsilon(iteration)
-    transitions, predicted_q_values, done_episodes_lens = run_steps(q_model, epsilon)
+    transitions, predicted_q_values, done_episodes_lens, done_episodes_total_rewards = run_steps(q_model, epsilon)
     replay_memory.put_all(transitions)
     # Monitoring stuff
     rb_episodes_lens.put_all(done_episodes_lens)
+    rb_episodes_total_rewards.put_all(done_episodes_total_rewards)
 
     # Train one step with mini batch sampled from the replay memory
     mb_transitions = replay_memory.sample_stacked(cfg.BATCH_SIZE)
@@ -187,8 +194,14 @@ with tqdm.trange(cfg.NUM_ITERATIONS_TRAINING, desc='Training') as t:
       tf.summary.scalar('predicted_q_values/std_dev', np.std(predicted_q_values), step=iteration)
       if rb_episodes_lens.full:
         episode_lens = np.array(rb_episodes_lens.data)
-        tf.summary.scalar('episodes_lengths/mean', np.mean(episode_lens), step=iteration)
-        tf.summary.scalar('episodes_lengths/std_dev', np.std(episode_lens), step=iteration)
+        tf.summary.scalar('episodes/length_mean', np.mean(episode_lens), step=iteration)
+        #tf.summary.scalar('episodes_lengths/std_dev', np.std(episode_lens), step=iteration)
+      if rb_episodes_total_rewards.full:
+        episode_total_rewards = np.array(rb_episodes_total_rewards.data)
+        tf.summary.scalar('episodes/total_reward_mean', np.mean(episode_total_rewards), step=iteration)
+        tf.summary.scalar('episodes/total_reward_std_dev', np.std(episode_total_rewards), step=iteration)
+        tf.summary.scalar('episodes/total_reward_max', np.max(episode_total_rewards), step=iteration)
+        tf.summary.scalar('episodes/total_reward_min', np.min(episode_total_rewards), step=iteration)
 
 # SAVE TRAINED MODEL
 print(f'Save model at {model_dir}.')
