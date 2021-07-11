@@ -1,4 +1,4 @@
-import math
+import time
 
 import gym
 import numpy as np
@@ -7,6 +7,7 @@ import pygame
 from .tetris import Tetris
 
 class TetrisEnv(gym.Env):
+  RENDER_INTERMEDIATE_SLEEP_IN_S = 1.0 / 20
   COLORS = [
     (0, 0, 0),
     (120, 37, 179),
@@ -20,9 +21,10 @@ class TetrisEnv(gym.Env):
   WHITE = (255, 255, 255)
   GRAY = (128, 128, 128)
 
-  def __init__(self, width=10, height=20):
+  def __init__(self, width=10, height=20, render_intermediate_steps=False):
     self.height = height
     self.width = width
+    self.render_intermediate_steps = render_intermediate_steps
     self.observation_space = gym.spaces.Box(low=0.0, high=1.0, shape=(height, width))
     self.action_space = gym.spaces.Discrete(width * 4) # #translations * #rotations
     self.screen = None
@@ -74,16 +76,31 @@ class TetrisEnv(gym.Env):
     # First rotate then translate so that rotated pieces can reach the left and right border
     # Rotate
     rotation = action % 4
-    for _ in range(rotation):
-      self.game.rotate()
+    if not self.render_intermediate_steps:
+      for _ in range(rotation):
+        self.game.rotate()
+    else:
+      for _ in range(rotation):
+        self.game.rotate()
+        self.render()
+        time.sleep(TetrisEnv.RENDER_INTERMEDIATE_SLEEP_IN_S)
     # Translate
     translation = (action // 4) - (self.game.width // 2)
     direction = np.sign(translation)
     abs_translation = abs(translation)
-    for _ in range(abs_translation):
-      self.game.go_side(direction)
+    if not self.render_intermediate_steps:
+      for _ in range(abs_translation):
+        self.game.go_side(direction)
+    else:
+      for _ in range(abs_translation):
+        self.game.go_side(direction)
+        self.render()
+        time.sleep(TetrisEnv.RENDER_INTERMEDIATE_SLEEP_IN_S)
     # Drop piece
     self.game.go_space()
+    if self.render_intermediate_steps:
+      self.render()
+      time.sleep(TetrisEnv.RENDER_INTERMEDIATE_SLEEP_IN_S)
     reward = self.game.score - score_before
     return self._get_image(), float(reward), self.game.state == 'gameover', {}
 
@@ -209,10 +226,14 @@ class TetrisEnv(gym.Env):
         this won't be true if seed=None, for example.
     """
     return
+  
+  def set_auto_render_intermediate_steps(self, value):
+    """Non-canonical function for fancier rendering."""
+    self.render_intermediate_steps = value
 
 # Register this custom env so that it can be accessed the usual way by looking up the name
 gym.envs.registration.register(
-    id='TetrisFrames10x20-v0',
+    id='Tetris10x20-v0',
     entry_point='env.tetris:TetrisEnv',
     kwargs={
         'width': 10,
@@ -223,7 +244,7 @@ gym.envs.registration.register(
 )
 
 gym.envs.registration.register(
-    id='TetrisFrames8x20-v0',
+    id='Tetris8x20-v0',
     entry_point='env.tetris:TetrisEnv',
     kwargs={
         'width': 8,

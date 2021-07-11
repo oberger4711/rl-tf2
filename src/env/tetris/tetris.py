@@ -109,9 +109,16 @@ class Tetris:
           self.field[i + self.figure.y][j +
                                         self.figure.x] = self.figure.color
     self.break_lines()
+    # Simplified gameover rules:
+    for r in range(4):
+      for c in range(self.width):
+        if self.field[r][c] != 0:
+          self.state = 'gameover'
+          break
     self.new_figure()
-    if self.intersects():
-      self.state = "gameover"
+    # Original gameover rules:
+    #if self.intersects():
+    #  self.state = "gameover"
 
   def go_side(self, dx):
     old_x = self.figure.x
@@ -144,7 +151,7 @@ def play_manually():
   done = False
   clock = pygame.time.Clock()
   fps = 25
-  width, height = 6, 20
+  width, height = 10, 20
   game = Tetris(width, height)
   counter = 0
 

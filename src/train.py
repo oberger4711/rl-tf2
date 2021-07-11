@@ -19,7 +19,7 @@ if DEBUG:
 FLOAT_EPSILON = np.finfo(np.float32).eps.item()
 
 # Instantiate config defining gym environment, model and hyperparameters
-ConfigClass = config.CONFIGS['TetrisFrames8x20-v0']
+ConfigClass = config.CONFIGS['Tetris8x20-v0']
 #ConfigClass = config.CONFIGS['CartPole-v1']
 cfg = ConfigClass()
 
@@ -213,6 +213,7 @@ with tqdm.trange(cfg.NUM_ITERATIONS_TRAINING, desc='Training') as t:
 # SAVE TRAINED MODEL
 print(f'Save model at {model_dir}.')
 q_model.save(model_dir)
+#q_model.save_weights(model_dir)
 
 # SHOWCASE
 print("Render results.")
