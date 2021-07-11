@@ -1,8 +1,10 @@
-from .tetris import Tetris
+import math
 
 import gym
 import numpy as np
 import pygame
+
+from .tetris import Tetris
 
 class TetrisEnv(gym.Env):
   COLORS = [
@@ -19,13 +21,13 @@ class TetrisEnv(gym.Env):
   GRAY = (128, 128, 128)
 
   def __init__(self, width=10, height=20):
-    self.observation_space = gym.spaces.Box(low=0.0, high=1.0, shape=(height, width))
-    self.action_space = gym.spaces.Discrete(4)
     self.height = height
     self.width = width
+    self.observation_space = gym.spaces.Box(low=0.0, high=1.0, shape=(height, width))
+    self.action_space = gym.spaces.Discrete(width * 4) # #translations * #rotations
     self.screen = None
     self.rendering = False
-    self.game = Tetris(height, width)
+    self.game = Tetris(width, height)
     self.game.new_figure()
     self._get_image()
 
@@ -58,17 +60,30 @@ class TetrisEnv(gym.Env):
         done (bool): whether the episode has ended, in which case further step() calls will return undefined results
         info (dict): contains auxiliary diagnostic information (helpful for debugging, and sometimes learning)
     """
+    if self.game.state == 'gameover':
+      gym.logger.warn(
+          "You are calling 'step()' even though this "
+          "environment has already returned done = True. You "
+          "should always call 'reset()' once you receive 'done = "
+          "True' -- any further steps are undefined behavior."
+      )
+      return self._get_image(), 0.0, True, {}
+    if action > self.action_space.n:
+      gym.logger.warn(f"Action out of range [0, {self.action_space.n}]")
     score_before = self.game.score
-    if action == 0:
+    # First rotate then translate so that rotated pieces can reach the left and right border
+    # Rotate
+    rotation = action % 4
+    for _ in range(rotation):
       self.game.rotate()
-    elif action == 1:
-      self.game.go_side(-1) # Left
-    elif action == 2:
-      self.game.go_side(1) # Right
-    elif action == 3:
-      self.game.go_space() # Drop
-    else:
-      raise RuntimeError("Action out of range [0, 3]")
+    # Translate
+    translation = (action // 4) - (self.game.width // 2)
+    direction = np.sign(translation)
+    abs_translation = abs(translation)
+    for _ in range(abs_translation):
+      self.game.go_side(direction)
+    # Drop piece
+    self.game.go_space()
     reward = self.game.score - score_before
     return self._get_image(), float(reward), self.game.state == 'gameover', {}
 
@@ -85,7 +100,7 @@ class TetrisEnv(gym.Env):
     Returns:
         observation (object): the initial observation.
     """
-    self.game = Tetris(self.height, self.width)
+    self.game = Tetris(self.width, self.height)
     self.game.new_figure()
     return self._get_image()
 
@@ -207,10 +222,22 @@ gym.envs.registration.register(
     reward_threshold=50    # TODO: Find a good value
 )
 
+gym.envs.registration.register(
+    id='TetrisFrames8x20-v0',
+    entry_point='env.tetris:TetrisEnv',
+    kwargs={
+        'width': 8,
+        'height': 20
+      },
+    max_episode_steps=200, # TODO: Find a good value
+    reward_threshold=50    # TODO: Find a good value
+)
+
 # For debugging:
 #t = TetrisEnv()
 #t.render()
 #obs, reward, done, _ = t.step(0)
 #t.render()
-#obs, reward, done, _ = t.step(3)
+#obs, reward, done, _ = t.step(5)
 #t.render()
+#print("done")
