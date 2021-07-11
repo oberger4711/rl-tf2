@@ -19,7 +19,8 @@ if DEBUG:
 FLOAT_EPSILON = np.finfo(np.float32).eps.item()
 
 # Instantiate config defining gym environment, model and hyperparameters
-ConfigClass = config.CONFIGS["TetrisFrames10x20-v0"]
+ConfigClass = config.CONFIGS['TetrisFrames8x20-v0']
+#ConfigClass = config.CONFIGS['CartPole-v1']
 cfg = ConfigClass()
 
 envs = [gym.make(cfg.ENV_NAME) for _ in range(cfg.BATCH_SIZE)]
@@ -80,7 +81,6 @@ def envs_step(actions: np.ndarray):
       done_episodes_total_rewards.append(envs_episode_total_rewards[i])
       envs_episode_lens[i] = 0
       envs_episode_total_rewards[i] = 0
-  envs[0].render()
   return transitions, done_episodes_lens, done_episodes_total_rewards
 
 def decide_action_epsilon_greedy(q_values: tf.Tensor, expl_epsilon: float):
@@ -164,6 +164,7 @@ def train_step(mb_transitions, q_model, target_model, optimizer):
 expl_epsilon = utilities.make_epsilon_func_ramped(cfg.EXPL_EPSILON_START, cfg.EXPL_EPSILON_END, cfg.NUM_ITERATIONS_TRAINING, cfg.EXPL_EPSILON_PERCENTAGE_RAMP)
 rb_episodes_lens = utilities.RingBuffer(cfg.MONITORING_SLIDING_WINDOW_LEN)
 rb_episodes_total_rewards = utilities.RingBuffer(cfg.MONITORING_SLIDING_WINDOW_LEN)
+viz_frame = 0
 with tqdm.trange(cfg.NUM_ITERATIONS_TRAINING, desc='Training') as t:
   for iteration in t:
     # DQN algorithm:
@@ -175,6 +176,12 @@ with tqdm.trange(cfg.NUM_ITERATIONS_TRAINING, desc='Training') as t:
     epsilon = expl_epsilon(iteration)
     transitions, predicted_q_values, done_episodes_lens, done_episodes_total_rewards = run_steps(q_model, epsilon)
     replay_memory.put_all(transitions)
+    if cfg.VIZ_TRAINING:
+      viz_frame
+      viz_frame += 1
+      if viz_frame == cfg.VIZ_TRAINING_FRAME_INTERVAL:
+        envs[0].render()
+        viz_frame = 0
     # Monitoring stuff
     rb_episodes_lens.put_all(done_episodes_lens)
     rb_episodes_total_rewards.put_all(done_episodes_total_rewards)
@@ -212,4 +219,5 @@ print("Render results.")
 while True:
   envs[0].render()
   done = run_steps(q_model)[0][0][-1]
+  time.sleep(cfg.VIZ_DELAY_IN_S)
   #if done: time.sleep(0.5) # Delay when episode over

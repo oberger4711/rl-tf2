@@ -49,7 +49,7 @@ class Tetris:
   zoom = 20
   figure = None
 
-  def __init__(self, height, width):
+  def __init__(self, width, height):
     self.height = height
     self.width = width
     self.field = []
@@ -62,7 +62,7 @@ class Tetris:
       self.field.append(new_line)
 
   def new_figure(self):
-    self.figure = Figure(3, 0)
+    self.figure = Figure((self.width // 2) - 2, 0)
 
   def intersects(self):
     intersection = False
@@ -144,7 +144,8 @@ def play_manually():
   done = False
   clock = pygame.time.Clock()
   fps = 25
-  game = Tetris(20, 10)
+  width, height = 6, 20
+  game = Tetris(width, height)
   counter = 0
 
   pressing_down = False
@@ -176,7 +177,7 @@ def play_manually():
         if event.key == pygame.K_SPACE:
           game.go_space()
         if event.key == pygame.K_ESCAPE:
-          game.__init__(20, 10)
+          game.__init__(width, height)
 
     if event.type == pygame.KEYUP:
       if event.key == pygame.K_DOWN:

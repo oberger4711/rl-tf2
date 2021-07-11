@@ -18,3 +18,6 @@ class BaseConfig:
     self.DOUBLE_DQN = True
     self.MONITORING_SLIDING_WINDOW_LEN = 200
     '''
+    self.VIZ_TRAINING = False
+    self.VIZ_TRAINING_FRAME_INTERVAL = 1
+    self.VIZ_DELAY_IN_S = 0
