@@ -46,6 +46,10 @@ class TetrisEnv(gym.Env):
     #img[20, 10, 0] = np.array(self.game.field, dtype=np.uint8)
     return img
 
+  def __render_intermediate_step(self):
+    self.render()
+    time.sleep(TetrisEnv.RENDER_INTERMEDIATE_SLEEP_IN_S)
+
   def step(self, action):
     """Run one timestep of the environment's dynamics. When end of
     episode is reached, you are responsible for calling `reset()`
@@ -82,8 +86,7 @@ class TetrisEnv(gym.Env):
     else:
       for _ in range(rotation):
         self.game.rotate()
-        self.render()
-        time.sleep(TetrisEnv.RENDER_INTERMEDIATE_SLEEP_IN_S)
+        self.__render_intermediate_step()
     # Translate
     translation = (action // 4) - (self.game.width // 2)
     direction = np.sign(translation)
@@ -94,13 +97,11 @@ class TetrisEnv(gym.Env):
     else:
       for _ in range(abs_translation):
         self.game.go_side(direction)
-        self.render()
-        time.sleep(TetrisEnv.RENDER_INTERMEDIATE_SLEEP_IN_S)
+        self.__render_intermediate_step()
     # Drop piece
     self.game.go_space()
     if self.render_intermediate_steps:
-      self.render()
-      time.sleep(TetrisEnv.RENDER_INTERMEDIATE_SLEEP_IN_S)
+      self.__render_intermediate_step()
     reward = self.game.score - score_before
     return self._get_image(), float(reward), self.game.state == 'gameover', {}
 
