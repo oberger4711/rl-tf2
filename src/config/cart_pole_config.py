@@ -19,6 +19,8 @@ class CartPoleConfig(BaseConfig):
     self.DISCOUNT_FACTOR = 1.0 # Gamma
     self.DOUBLE_DQN = True
     self.MONITORING_SLIDING_WINDOW_LEN = 200
+    self.VIZ_TRAINING = True
+    self.VIZ_TRAINING_FRAME_INTERVAL = 3
 
     # Geometric series limes
     if self.DISCOUNT_FACTOR < 1.0: print(f'q -> {1 / (1 - self.DISCOUNT_FACTOR)}')
