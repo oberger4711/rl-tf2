@@ -7,7 +7,7 @@ import pygame
 from .tetris import Tetris
 
 class TetrisEnv(gym.Env):
-  RENDER_INTERMEDIATE_SLEEP_IN_S = 1.0 / 20
+  RENDER_INTERMEDIATE_SLEEP_IN_S = 1.0 / 15
   COLORS = [
     (0, 0, 0),
     (120, 37, 179),
