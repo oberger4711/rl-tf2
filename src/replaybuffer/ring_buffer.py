@@ -27,7 +27,3 @@ class RingBuffer:
     sampled_elements = random.sample(self.data, n)
     stacked_elements = tuple(np.stack([element[i] for element in sampled_elements]) for i in range(len(sampled_elements[0])))
     return stacked_elements
-
-  def get_len(self):
-    if self.full: return self.capacity
-    else: return self.insert_cursor

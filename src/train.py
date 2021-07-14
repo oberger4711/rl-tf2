@@ -10,6 +10,7 @@ import tqdm
 
 import config
 import utilities
+import replaybuffer
 import env.tetris
 
 # DEBUGGING
@@ -99,7 +100,7 @@ def run_steps(q_model: tf.keras.Model, expl_epsilon: float=0):
 
 def init_replay_memory(q_model):
   """Initializes replay memory with data."""
-  replay_memory = utilities.RingBuffer(cfg.REPLAY_MEMORY_CAPACITY)
+  replay_memory = replaybuffer.RingBuffer(cfg.REPLAY_MEMORY_CAPACITY)
   with tqdm.tqdm(total=cfg.REPLAY_MEMORY_CAPACITY, unit=" transitions", desc="Initialize replay memory with transitions") as t:
     while not replay_memory.full:
       transitions, _, _, _ = run_steps(q_model, cfg.EXPL_EPSILON_START)
@@ -162,8 +163,8 @@ def train_step(mb_transitions, q_model, target_model, optimizer):
 
 # TRAINING
 expl_epsilon = utilities.make_epsilon_func_ramped(cfg.EXPL_EPSILON_START, cfg.EXPL_EPSILON_END, cfg.NUM_ITERATIONS_TRAINING, cfg.EXPL_EPSILON_PERCENTAGE_RAMP)
-rb_episodes_lens = utilities.RingBuffer(cfg.MONITORING_SLIDING_WINDOW_LEN)
-rb_episodes_total_rewards = utilities.RingBuffer(cfg.MONITORING_SLIDING_WINDOW_LEN)
+rb_episodes_lens = replaybuffer.RingBuffer(cfg.MONITORING_SLIDING_WINDOW_LEN)
+rb_episodes_total_rewards = replaybuffer.RingBuffer(cfg.MONITORING_SLIDING_WINDOW_LEN)
 viz_frame = 0
 with tqdm.trange(cfg.NUM_ITERATIONS_TRAINING, desc='Training') as t:
   for iteration in t:
