@@ -14,7 +14,7 @@ import replaybuffer
 import env.tetris
 
 # DEBUGGING
-DEBUG = False # NOTE: True is significantly faster than False
+DEBUG = False # NOTE: False is significantly faster
 if DEBUG:
   tf.config.run_functions_eagerly(True) # Disable tf.function decorator
 FLOAT_EPSILON = np.finfo(np.float32).eps.item()
